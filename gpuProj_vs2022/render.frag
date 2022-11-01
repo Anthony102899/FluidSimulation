@@ -11,6 +11,12 @@ void main()
 
   	vec2 pos = texCoord.xy;		//	Position of each lattice node	
 	//	Following are for dummy display
-	float color = texture2D( state_texture3, pos ).y;
-	FragColor = vec4( color*0.4, color*0.6, color, 0.0 );
+	if ( texture( boundary_texture,pos ).x > 0.5 ){
+		float color = texture2D( state_texture3, pos ).y;
+		FragColor = vec4( color*0.4, color*0.6, color, 0.0 );
+	}
+	else{
+		FragColor = vec4( 1.0, 1.0, 1.0, 0.0 );
+	}
+	
 }

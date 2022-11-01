@@ -74,8 +74,22 @@ void main()
 		//	....
 
 		//	Following are DUMMY code only
-	    FragColor[0] = texture(state_texture1, pos);
-	    FragColor[1] = texture(state_texture2, pos);
-	    FragColor[2] = texture(state_texture3, pos);
+	    float ff[9];// = {0.0};
+		float feq[9];
+		float f_star[9];
+        float rho = 0;
+        vec2 u = vec2(0, 0);
+		ff[0] = texture(state_texture3, pos).x;
+		ff[1] = texture(state_texture1, pos - e[1]/image_size).x;
+		ff[2] = texture(state_texture1, pos - e[2]/image_size).y;
+		ff[3] = texture(state_texture1, pos - e[3]/image_size).z;
+		ff[4] = texture(state_texture1, pos - e[4]/image_size).w;
+		ff[5] = texture(state_texture2, pos - e[5]/image_size).x;
+		ff[6] = texture(state_texture2, pos - e[6]/image_size).y;
+		ff[7] = texture(state_texture2, pos - e[7]/image_size).z;
+		ff[8] = texture(state_texture2, pos - e[8]/image_size).w;
+		FragColor[0] = vec4( ff[3], ff[4], ff[1], ff[2] );
+      	FragColor[1] = vec4( ff[7], ff[8], ff[5], ff[6] );
+      	FragColor[2] = vec4( ff[0], rho, u.x, u.y );    
 	}
 }
