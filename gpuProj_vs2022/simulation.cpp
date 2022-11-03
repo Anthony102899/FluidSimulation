@@ -8,16 +8,20 @@
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void processInput(GLFWwindow *window);
 bool initFluidState(const char* imagePath);
 
 //! global variables
 float tau = 0.58;
 int winWidth = 0, winHeight = 0;
+double pos_x = 0.0, pos_y = 0.0;
+double pos_x2 = 0.0, pos_y2 = 0.0;
 //! those data will be used in shaders
 unsigned int lbmBuffer[3];
 //!	lbmBoundary stores boundary
 unsigned int lbmBoundary;
+int input = 0;
 
 
 int main()
@@ -38,6 +42,7 @@ int main()
 	}
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	//! set vsync, make sure the simulation won't go too fast
 	glfwSwapInterval(1);
 	//! glad: load all OpenGL function pointers
@@ -97,10 +102,12 @@ int main()
 	glUniform1i(glGetUniformLocation(lbmProgram.ID, "boundary_texture"), 0);
 	glUniform1i(glGetUniformLocation(lbmProgram.ID, "state_texture1"), 1);
 	glUniform1i(glGetUniformLocation(lbmProgram.ID, "state_texture2"), 2);
+	glUniform1i(glGetUniformLocation(lbmProgram.ID, "mouse_active"), input);
 	glUniform1i(glGetUniformLocation(lbmProgram.ID, "state_texture3"), 3);
 	glUniform2f(glGetUniformLocation(lbmProgram.ID, "image_size"), winWidth, winHeight);
 	glUniform1f(glGetUniformLocation(lbmProgram.ID, "tau"), tau);
-
+	glUniform2f(glGetUniformLocation(lbmProgram.ID, "mouse_pos"), pos_x, pos_y);
+	glUniform2f(glGetUniformLocation(lbmProgram.ID, "mouse_input"), pos_x2, pos_y2);
 	//! set uniform variables for render.frag
 	renderProgram.use(); // don't forget to activate/use the shader before setting uniforms!
 	glUniform1i(glGetUniformLocation(renderProgram.ID, "boundary_texture"), 0);
@@ -129,6 +136,9 @@ int main()
 		//! bind to frame_buffer and draw scene as we normally would to color texture 
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 		lbmProgram.use();
+		glUniform1i(glGetUniformLocation(lbmProgram.ID, "mouse_active"), input);
+		glUniform2f(glGetUniformLocation(lbmProgram.ID, "mouse_pos"), pos_x, pos_y);
+		glUniform2f(glGetUniformLocation(lbmProgram.ID, "mouse_input"), pos_x2, pos_y2);
 		glBindVertexArray(VAO);
 		//! bind textures on corresponding texture units
 		glActiveTexture(GL_TEXTURE0);
@@ -143,7 +153,7 @@ int main()
 		GLenum buffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
 		glDrawBuffers(3, buffers);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		
+		input = 0;
 		//! render to screen
 		// -----------------
 		//! now bind back to default frame buffer and draw a quad plane with the attached frame_buffer color texture
@@ -305,4 +315,16 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	//! make sure the viewport matches the new window dimensions; note that width and 
 	//! height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
+		glfwGetCursorPos(window, &pos_x, &pos_y);
+	}
+	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE) {
+		glfwGetCursorPos(window, &pos_x2, &pos_y2);
+		pos_x2 = pos_x2 - pos_x;
+		pos_y2 = pos_y2 - pos_y;
+		input = 1;
+	}
 }

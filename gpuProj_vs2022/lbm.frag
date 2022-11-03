@@ -6,6 +6,9 @@ uniform sampler2D state_texture1;        //input texture containing f1-f4
 uniform sampler2D state_texture2;        //input texture containing f5-f8
 uniform sampler2D state_texture3;        //input texture containing f0, rho, ux and uy
 uniform vec2 image_size;
+uniform vec2 mouse_pos;
+uniform int mouse_active;
+uniform vec2 mouse_input;
 uniform float tau;			//	Tau is corresponding to Viscosity and is used to evaluate feq (collision term).
 
 void main()
@@ -34,6 +37,7 @@ void main()
 	w[8] = 1.0/36.0;
 
 	vec2 pos = texCoord.xy;		//position of each lattice node	
+	vec2 click_pos = vec2 (mouse_pos.x / image_size.x, 1 - mouse_pos.y / image_size.y);
 	if ( texture( boundary_texture,pos ).x > 0.5 )
     {	//	Node is 'Fluid'
         float ff[9];// = {0.0};
@@ -55,6 +59,11 @@ void main()
 			u += f_star[i] * e[i];
 		}
 		u /= rho;
+		if(mouse_active == 1 && abs(pos.x - click_pos.x) < 0.01 && abs(pos.y - click_pos.y) < 0.01){
+			vec2 normalized_diff = normalize(mouse_input);
+			u.x += normalized_diff.x;
+			u.y -= normalized_diff.y;
+		}
 		float uu_dot = dot(u, u);
 
 		for(int i = 0; i < 9; i++){
@@ -63,7 +72,6 @@ void main()
 			ff[i] = f_star[i] - (f_star[i] - feq[i])/tau;
 		}
 
-
       	FragColor[0] = vec4( ff[1], ff[2], ff[3], ff[4] );
       	FragColor[1] = vec4( ff[5], ff[6], ff[7], ff[8] );
       	FragColor[2] = vec4( ff[0], rho, u.x, u.y );        
@@ -71,9 +79,6 @@ void main()
     else 
     {	//	Node is 'Solid'
 		//	To do: Handle the boundary condition here
-		//	....
-
-		//	Following are DUMMY code only
 	    float ff[9];// = {0.0};
 		float feq[9];
 		float f_star[9];
