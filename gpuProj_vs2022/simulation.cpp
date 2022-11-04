@@ -11,12 +11,14 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void processInput(GLFWwindow *window);
 bool initFluidState(const char* imagePath);
-
+bool updateFluidState(const char* imagePath, int offset);
 //! global variables
 float tau = 0.58;
 int winWidth = 0, winHeight = 0;
 double pos_x = 0.0, pos_y = 0.0;
 double pos_x2 = 0.0, pos_y2 = 0.0;
+int sign = 1;
+int offset = 0;
 //! those data will be used in shaders
 unsigned int lbmBuffer[3];
 //!	lbmBoundary stores boundary
@@ -130,7 +132,8 @@ int main()
 	{
 		//! input
 		processInput(window);
-
+		offset += sign; 
+		updateFluidState(image_path, offset/2);
 		//! LBM iterative computation
 		// --------------------------
 		//! bind to frame_buffer and draw scene as we normally would to color texture 
@@ -186,6 +189,63 @@ int main()
 	return 0;
 }
 
+
+bool updateFluidState(const char* imagePath, int offset) {
+	//! load image
+	int nrChannels;
+	stbi_set_flip_vertically_on_load(true);
+	unsigned char* maskData = stbi_load(imagePath, &winWidth, &winHeight, &nrChannels, 0);
+	float* boundaryData = new float[winWidth * winHeight * 3];
+	if (boundaryData == NULL) {
+		cout << "Unable to allocate memory!" << endl;
+		return false;
+	}
+	int maxIndex = (winHeight - 1) * winWidth + winWidth - 1;
+	//!	Fill _boundaryData_ with image data from _boundaryBitmap_
+	for (int y = 0; y < winHeight; y++)
+	{
+		for (int x = 0; x < winWidth; x++)
+		{
+			int index = y * winWidth + x;
+			//! Pixels near image margin are set to be boundary 
+			if ((x < 2) || (x > (winWidth - 3)) || (y < 2) || (y > (winHeight - 3)))
+			{
+				boundaryData[3 * index + 0] = 0.0f;
+				boundaryData[3 * index + 1] = 0.0f;
+				boundaryData[3 * index + 2] = 0.0f;
+			}
+			else
+			{
+				if (index + offset < maxIndex && index + offset > 0) {
+					unsigned char r = maskData[3 * (index + offset) + 0];
+					unsigned char g = maskData[3 * (index + offset) + 1];
+					unsigned char b = maskData[3 * (index + offset) + 2];
+					boundaryData[3 * index + 0] = r / 255.0;
+					boundaryData[3 * index + 1] = g / 255.0;
+					boundaryData[3 * index + 2] = b / 255.0;
+				}
+				else {
+					sign = 0;
+					unsigned char r = maskData[3 * (index + offset) + 0];
+					unsigned char g = maskData[3 * (index + offset) + 1];
+					unsigned char b = maskData[3 * (index + offset) + 2];
+					boundaryData[3 * index + 0] = r / 255.0;
+					boundaryData[3 * index + 1] = g / 255.0;
+					boundaryData[3 * index + 2] = b / 255.0;
+				}
+			}
+		}
+	}
+	stbi_image_free(maskData);
+	//!	generate OpenGL texture buffer for Boundary data
+	glBindTexture(GL_TEXTURE_2D, lbmBoundary);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, winWidth, winHeight, 0, GL_RGB, GL_FLOAT, boundaryData);
+	
+}
 
 bool initFluidState(const char* imagePath)
 {
